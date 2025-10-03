@@ -1,0 +1,27 @@
+# Root monorepo build context ignores
+node_modules
+**/node_modules
+
+# Build outputs
+**/dist
+**/build
+**/.turbo
+**/.next
+
+# TypeScript build cache
+**/*.tsbuildinfo
+
+# Logs
+**/logs
+**/*.log
+
+# Prisma generated (kept in package but not required in build context)
+**/prisma/generated
+
+# VCS
+.git
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode
