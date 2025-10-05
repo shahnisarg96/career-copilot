@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Auth Service Models
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  name         String?
+  role         String   @default("USER")
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("Users")
+}
+
+model Auth {
+  id          Int      @id @default(autoincrement())
+  userId      String?  @map("userid")
+  provider    String?
+  providerId  String?  @map("providerid")
+  token       String?
+  createdAt   DateTime @default(now()) @map("createdat")
+  updatedAt   DateTime @updatedAt @map("updatedat")
+
+  @@map("Auth")
+}
+
+// Intro Service Models
+model Intro {
+  id          Int      @id @default(autoincrement())
+  userId      String?  @map("userid")
+  name        String   @map("headline")
+  description String?  @map("subtext")
+  image       String?
+  titles      String?
+  createdAt   DateTime @default(now()) @map("createdat")
+  updatedAt   DateTime @updatedAt @map("updatedat")
+
+  @@map("Intro")
+}
+
+// About Service Models
+model About {
+  id          Int      @id @default(autoincrement())
+  userId      String?  @map("userid")
+  tagline     String   @map("title")
+  description String?  @map("content")
+  currentFocus String? @map("currentfocus")
+  createdAt   DateTime @default(now()) @map("createdat")
+  updatedAt   DateTime @updatedAt @map("updatedat")
+
+  @@map("About")
+}
+
+// Experience Service Models
+model Experience {
+  id          Int      @id @default(autoincrement())
+  userId      String?  @map("userid")
+  companyName    String  @map("company")
+  companyLogo    String? @map("companylogo")
+  companyWebsite String? @map("companywebsite")
+  role           String
+  startDate      String? @map("startdate")
+  endDate        String? @map("enddate")
+  location       String? @map("location")
+  tagline        String? @map("summary")
+  skills         String? @map("skills")
+  description    String? @map("description")
+  createdAt      DateTime @default(now()) @map("createdat")
+  updatedAt      DateTime @updatedAt @map("updatedat")
+
+  @@map("Experience")
+}
+
+// Projects Service Models
+model Project {
+  id          Int      @id @default(autoincrement())
+  userId      String?  @map("userid")
+  title       String
+  code        String?  @map("link")
+  demo        String?  @map("demo")
+  description String?  @map("summary")
+  technology  String?  @map("technology")
+  details     String?  @map("details")
+  createdAt   DateTime @default(now()) @map("createdat")
+  updatedAt   DateTime @updatedAt @map("updatedat")
+
+  @@map("Project")
+}
+
+// Skills Service Models
+model Skill {
+  id          Int      @id @default(autoincrement())
+  userId      String?  @map("userid")
+  title       String   @map("name")
+  level       String?
+  icon        String?
+  color       String?
+  category    String?
+  createdAt   DateTime @default(now()) @map("createdat")
+  updatedAt   DateTime @updatedAt @map("updatedat")
+
+  @@map("Skill")
+}
+
+// Certificates Service Models
+model Certificate {
+  id          Int      @id @default(autoincrement())
+  userId      String?  @map("userid")
+  title       String
+  issuer      String?
+  date        DateTime?
+  imgSrc      String?  @map("imgsrc")
+  createdAt   DateTime @default(now()) @map("createdat")
+  updatedAt   DateTime @updatedAt @map("updatedat")
+
+  @@map("Certificate")
+}
+
+// Education Service Models
+model Education {
+  id          Int      @id @default(autoincrement())
+  userId      String?  @map("userid")
+  school      String
+  url         String
+  location    String
+  degree      String
+  grade       String?
+  period      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("Education")
+}
+
+// Contact Service Models
+model Contact {
+  id          Int      @id @default(autoincrement())
+  userId      String?  @map("userid")
+  icon        String
+  label       String
+  href        String
+  title       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("Contact")
+}
+
+// Portfolio Service Models
+model Portfolio {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text"))
+  userId      String   @unique
+  isPublished Boolean  @default(false)
+  publicSlug  String?  @unique @map("publicSlug")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("Portfolio")
+}
