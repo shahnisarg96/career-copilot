@@ -1,0 +1,62 @@
+ARG SERVICE_NAME
+FROM node:22-alpine AS base
+WORKDIR /app
+RUN apk add --no-cache libc6-compat
+
+# Dependencies stage (monorepo install)
+FROM base AS deps
+COPY package*.json ./
+COPY packages ./packages
+COPY services ./services
+RUN npm ci
+
+# Build stage
+FROM deps AS builder
+ARG SERVICE_NAME
+
+# Avoid stale incremental build state coming from the host
+RUN find . -name '*.tsbuildinfo' -delete
+
+# Generate Prisma client into the hoisted root node_modules.
+# Prisma writes the client next to the schema location, so we copy the schema to a root-level
+# folder to ensure output ends up in /app/node_modules/.prisma.
+RUN mkdir -p prisma \
+	&& cp packages/prisma-client/prisma/schema.prisma prisma/schema.prisma \
+	&& npx prisma generate --schema prisma/schema.prisma
+RUN cd packages/common && npm run build
+RUN cd packages/prisma-client && npm run build
+RUN cd services/${SERVICE_NAME} && npm run build
+
+# Some workspaces may have non-hoisted deps installed into workspace-local node_modules.
+# Ensure the folder exists so the runtime stage COPY never fails.
+RUN mkdir -p services/${SERVICE_NAME}/node_modules
+
+# Remove devDependencies for runtime
+# NOTE: Prisma generate writes into node_modules/.prisma, which `npm prune` can remove as "extraneous".
+RUN PRISMA_TMP=/tmp/prisma-node-modules; \
+	if [ -d node_modules/.prisma ]; then mkdir -p "$PRISMA_TMP" && cp -R node_modules/.prisma "$PRISMA_TMP"; fi; \
+	npm prune --omit=dev --workspaces --include-workspace-root; \
+	if [ -d "$PRISMA_TMP/.prisma" ]; then cp -R "$PRISMA_TMP/.prisma" node_modules/; fi
+
+# Runtime stage - minimal production image
+FROM base AS runner
+ARG SERVICE_NAME
+ENV NODE_ENV=production
+
+COPY --from=builder /app/node_modules ./node_modules
+
+# Keep non-hoisted workspace dependencies available at runtime.
+COPY --from=builder /app/services/${SERVICE_NAME}/node_modules ./services/${SERVICE_NAME}/node_modules
+
+# Copy built artifacts
+COPY --from=builder /app/packages/common/dist ./packages/common/dist
+COPY --from=builder /app/packages/common/package.json ./packages/common/
+COPY --from=builder /app/packages/prisma-client/dist ./packages/prisma-client/dist
+COPY --from=builder /app/packages/prisma-client/prisma ./packages/prisma-client/prisma
+COPY --from=builder /app/packages/prisma-client/package.json ./packages/prisma-client/
+COPY --from=builder /app/services/${SERVICE_NAME}/dist ./services/${SERVICE_NAME}/dist
+COPY --from=builder /app/services/${SERVICE_NAME}/package.json ./services/${SERVICE_NAME}/
+
+WORKDIR /app/services/${SERVICE_NAME}
+
+CMD ["node", "dist/server.js"]
