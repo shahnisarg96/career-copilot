@@ -1,0 +1,341 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: dissertation-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      # Required (set in root .env). Do not hardcode credentials in git.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-mydb}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - appnet
+
+  db-sync:
+    build:
+      context: .
+      dockerfile: Dockerfile.prisma
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mydb?schema=public}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      # Prevent data resets on rebuild by default.
+      # Set DB_SYNC_RESET=true when you intentionally want a destructive reset + reseed.
+      DB_SYNC_RESET: ${DB_SYNC_RESET:-false}
+      # Allow destructive schema changes without full reset (may drop columns).
+      DB_SYNC_ACCEPT_DATA_LOSS: ${DB_SYNC_ACCEPT_DATA_LOSS:-false}
+      # Seeds baseline rows (admin/user + public demo rows). Disable to avoid any seed overwrites.
+      DB_SYNC_SEED: ${DB_SYNC_SEED:-true}
+    depends_on:
+      - postgres
+    restart: "no"
+    networks:
+      - appnet
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: dissertation-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+    ports:
+      - "5050:80" # avoid conflict with gateway (8080)
+    depends_on:
+      - postgres
+    networks:
+      - appnet
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.template
+      args:
+        SERVICE_NAME: api-gateway
+    image: api-gateway:latest
+    environment:
+      PORT: ${GATEWAY_PORT:-8080}
+      REQUEST_TIMEOUT: ${REQUEST_TIMEOUT:-60000}
+      RATE_LIMIT_POINTS: ${RATE_LIMIT_POINTS:-1000}
+      RATE_LIMIT_DURATION: ${RATE_LIMIT_DURATION:-60}
+      MAX_RETRIES: ${MAX_RETRIES:-3}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth-service:8081/}
+      INTRO_SERVICE_URL: ${INTRO_SERVICE_URL:-http://intro-service:8082/}
+      ABOUT_SERVICE_URL: ${ABOUT_SERVICE_URL:-http://about-service:8083/}
+      EXPERIENCE_SERVICE_URL: ${EXPERIENCE_SERVICE_URL:-http://experience-service:8084/}
+      PROJECTS_SERVICE_URL: ${PROJECTS_SERVICE_URL:-http://projects-service:8085/}
+      SKILLS_SERVICE_URL: ${SKILLS_SERVICE_URL:-http://skills-service:8086/}
+      CERTIFICATES_SERVICE_URL: ${CERTIFICATES_SERVICE_URL:-http://certificates-service:8087/}
+      EDUCATION_SERVICE_URL: ${EDUCATION_SERVICE_URL:-http://education-service:8088/}
+      CONTACT_SERVICE_URL: ${CONTACT_SERVICE_URL:-http://contact-service:8089/}
+      PORTFOLIO_SERVICE_URL: ${PORTFOLIO_SERVICE_URL:-http://portfolio-service:8090/}
+      AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:8091/}
+      JWT_PUBLIC_KEY_PATH: /keys/public.pem
+    depends_on:
+      db-sync:
+        condition: service_completed_successfully
+      auth-service:
+        condition: service_started
+      intro-service:
+        condition: service_started
+      about-service:
+        condition: service_started
+      experience-service:
+        condition: service_started
+      projects-service:
+        condition: service_started
+      skills-service:
+        condition: service_started
+      certificates-service:
+        condition: service_started
+      education-service:
+        condition: service_started
+      contact-service:
+        condition: service_started
+      portfolio-service:
+        condition: service_started
+      ai-service:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    volumes:
+      - jwt-keys:/keys
+    networks:
+      - appnet
+  
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.template
+      args:
+        SERVICE_NAME: auth
+    image: auth-service:latest
+    environment:
+      PORT: ${AUTH_PORT:-8081}
+      TOKEN_EXPIRY: ${TOKEN_EXPIRY:-3600}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mydb?schema=public}
+      JWT_PRIVATE_KEY_PATH: /keys/private.pem
+      JWT_PUBLIC_KEY_PATH: /keys/public.pem
+      # Required (set in root .env). Do not hardcode credentials in git.
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    depends_on:
+      db-sync:
+        condition: service_completed_successfully
+    volumes:
+      - jwt-keys:/keys
+    ports:
+      - "8081:8081"
+    networks:
+      - appnet
+
+  intro-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.template
+      args:
+        SERVICE_NAME: intro
+    image: intro-service:latest
+    environment:
+      PORT: ${INTRO_PORT:-8082}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mydb?schema=public}
+    depends_on:
+      db-sync:
+        condition: service_completed_successfully
+    ports:
+      - "8082:8082"
+    networks:
+      - appnet
+
+  about-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.template
+      args:
+        SERVICE_NAME: about
+    image: about-service:latest
+    environment:
+      PORT: ${ABOUT_PORT:-8083}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mydb?schema=public}
+    depends_on:
+      db-sync:
+        condition: service_completed_successfully
+    ports:
+      - "8083:8083"
+    networks:
+      - appnet
+
+  experience-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.template
+      args:
+        SERVICE_NAME: experience
+    image: experience-service:latest
+    environment:
+      PORT: ${EXPERIENCE_PORT:-8084}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mydb?schema=public}
+    depends_on:
+      db-sync:
+        condition: service_completed_successfully
+    ports:
+      - "8084:8084"
+    networks:
+      - appnet
+
+  projects-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.template
+      args:
+        SERVICE_NAME: projects
+    image: projects-service:latest
+    environment:
+      PORT: ${PROJECTS_PORT:-8085}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mydb?schema=public}
+    depends_on:
+      db-sync:
+        condition: service_completed_successfully
+    ports:
+      - "8085:8085"
+    networks:
+      - appnet
+
+  skills-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.template
+      args:
+        SERVICE_NAME: skills
+    image: skills-service:latest
+    environment:
+      PORT: ${SKILLS_PORT:-8086}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mydb?schema=public}
+    depends_on:
+      db-sync:
+        condition: service_completed_successfully
+    ports:
+      - "8086:8086"
+    networks:
+      - appnet
+
+  certificates-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.template
+      args:
+        SERVICE_NAME: certificates
+    image: certificates-service:latest
+    environment:
+      PORT: ${CERTIFICATES_PORT:-8087}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mydb?schema=public}
+    depends_on:
+      db-sync:
+        condition: service_completed_successfully
+    ports:
+      - "8087:8087"
+    networks:
+      - appnet
+
+  education-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.template
+      args:
+        SERVICE_NAME: education
+    image: education-service:latest
+    environment:
+      PORT: ${EDUCATION_PORT:-8088}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mydb?schema=public}
+    depends_on:
+      db-sync:
+        condition: service_completed_successfully
+    ports:
+      - "8088:8088"
+    networks:
+      - appnet
+
+  contact-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.template
+      args:
+        SERVICE_NAME: contact
+    image: contact-service:latest
+    environment:
+      PORT: ${CONTACT_PORT:-8089}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mydb?schema=public}
+    depends_on:
+      db-sync:
+        condition: service_completed_successfully
+    ports:
+      - "8089:8089"
+    networks:
+      - appnet
+
+  portfolio-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.template
+      args:
+        SERVICE_NAME: portfolio
+    image: portfolio-service:latest
+    environment:
+      PORT: ${PORTFOLIO_PORT:-8090}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/mydb?schema=public}
+      # Optional override for publicUrl generation. If unset, the service infers the base URL
+      # from request headers (Origin / X-Forwarded-* / Host).
+      FRONTEND_URL: ${FRONTEND_URL:-}
+    depends_on:
+      db-sync:
+        condition: service_completed_successfully
+    ports:
+      - "8090:8090"
+    networks:
+      - appnet
+
+  ai-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.template
+      args:
+        SERVICE_NAME: ai
+    image: ai-service:latest
+    environment:
+      PORT: ${AI_PORT:-8091}
+      NODE_ENV: ${NODE_ENV:-production}
+      USE_MOCK_AI: ${USE_MOCK_AI:-false}
+      # Optional: set OPENAI_API_KEY in a root .env file (recommended) or your shell env.
+      # If empty, the service will fall back to mock mode.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GATEWAY_URL: ${GATEWAY_URL:-http://api-gateway:8080}
+    ports:
+      - "8091:8091"
+    networks:
+      - appnet
+
+  react-portfolio:
+    build:
+      context: ./react-portfolio
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:-/api}
+    image: react-portfolio:latest
+    container_name: react-portfolio
+    ports:
+      - "${REACT_PORT:-5173}:5173"
+    depends_on:
+      - api-gateway
+    networks:
+      - appnet
+
+networks:
+  appnet:
+    driver: bridge
+
+volumes:
+  pgdata:
+    driver: local
+  jwt-keys:
+    driver: local
