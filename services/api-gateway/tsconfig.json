@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "composite": true,
+    "declaration": true
+  },
+  "references": [{ "path": "../../packages/common" }],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
