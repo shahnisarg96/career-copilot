@@ -1,0 +1,26 @@
+{
+  "name": "ai-service",
+  "version": "1.0.0",
+  "description": "AI-powered portfolio generation service",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -b",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@dissertation/common": "1.0.0",
+    "express": "^5.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "openai": "^4.20.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.2"
+  }
+}
