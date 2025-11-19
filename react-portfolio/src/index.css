@@ -1,0 +1,30 @@
+html,
+body {
+    touch-action: manipulation;
+}
+
+/* Base styles (mobile) */
+.section {
+    padding: 1rem;
+}
+
+/* Tablet and above */
+@media (min-width: 768px) {
+    .section {
+        padding: 2rem;
+    }
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* Hide scrollbar but keep functionality */
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
